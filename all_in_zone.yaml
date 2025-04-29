@@ -1,0 +1,37 @@
+blueprint:
+  name: All in Zone
+  description: |
+    Creates a binary_sensor that is "on" when all the people are in the defined Zone.
+  domain: template
+  input:
+    people:
+      name: People
+      description: The people you want to track.
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - domain: person
+    zone:
+      name: Zone
+      description: The Zone you want to observe.
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain: zone
+variables:
+  persons: !input people
+  target_zone: !input zone
+binary_sensor:
+  state: |
+    {% if persons is not list %}
+      {% set persons = [persons] %}
+    {% endif %}
+    {{ difference(persons,state_attr(target_zone, 'persons')) == [] }}
+  availability: |
+    {% if persons is not list %}
+      {% set persons = [persons] %}
+    {% endif %}
+    {% set ent_list = (persons+[zone]) %}
+    {{ ent_list|count == ent_list|map('has_value')|list|count }}
