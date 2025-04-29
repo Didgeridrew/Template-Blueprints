@@ -1,0 +1,31 @@
+blueprint:
+  name: Simple Adjusted Sensor Value
+  description: Creates a sensor which holds the corrected value of a reference sensor
+  domain: template
+  input:
+    reference_entity:
+      name: Source Sensor
+      description: The sensor which needs to have its value adjusted
+      selector:
+          entity:
+            multiple: false
+            filter:
+              - domain: sensor
+    offset:
+      name: Offset
+      description: Numerical offset added to the sensors value (use negative values to subtract)
+      default: -1.0
+variables:
+  reference_entity: !input reference_entity
+  offset: !input offset
+sensor:
+  name: "Adjusted {{ state_attr(reference_entity, 'friendly_name')|default(reference_entity|slugify, 1) }}"
+  unit_of_measurement: |
+    {{ state_attr(reference_entity, 'unit_of_measurement') | default('', 1) }}
+  icon: |
+    {{ state_attr(reference_entity, 'icon') | default('mdi:script-outline', 1) }}
+  state: >
+    {% set h = states(reference_entity) | float(0) %}
+    {% set o = offset | float(0) %}
+    {{ h + o }}
+  availability: "{{ has_value(reference_entity) }}"
