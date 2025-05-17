@@ -1,4 +1,7 @@
 blueprint:
+  author: Didgeridrew
+  homeassistant:
+    min_version: 2025.1.0
   name: Simple Adjusted Value
   description: |
     Creates a sensor which holds the corrected value of a reference entity's state.
