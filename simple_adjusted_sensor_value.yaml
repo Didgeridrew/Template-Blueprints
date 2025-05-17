@@ -58,21 +58,20 @@ blueprint:
               label: Offset Entity Value will be subtracted.
 variables:
   reference_entity: !input reference_entity
-  static_offset: !input offset
+  static_offset: !input static_offset
   offset_entity: !input offset_entity
   subtract: !input subtract
   o_e: |
-    {% set init = 0 if offset_entity is undefined or offset_entity in [none, "None", "sensor.example_offset"] else states(offset_entity) | float(0) %}
+    {% set init = 0 if offset_entity is undefined or offset_entity in 
+    [none, "None", "sensor.example_offset"] else states(offset_entity) | float(0) %}
     {% set invert = -1 if subtract else 1 %}
     {{ invert * init }}
 sensor:
-  name: "Adjusted {{ state_attr(reference_entity, 'friendly_name') | default(reference_entity | slugify, 1) }}"
-  unit_of_measurement: |
-    {{ state_attr(reference_entity, 'unit_of_measurement') | default('', 1) }}
+  state_class: measurement
   icon: |
     {{ state_attr(reference_entity, 'icon') | default('mdi:plus-minus-variant', 1) }}
   state: |
     {% set h = states(reference_entity) | float(0) %}
-    {% set s_o = static_offset | float(0) %}
-    {{ h + s_o + o_e }}
+    {% set s_o = static_offset | float %}
+    {{ (h + s_o + o_e)|round(1) }}
   availability: "{{ has_value(reference_entity) }}"
