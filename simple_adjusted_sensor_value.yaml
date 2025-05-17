@@ -1,31 +1,78 @@
 blueprint:
-  name: Simple Adjusted Sensor Value
-  description: Creates a sensor which holds the corrected value of a reference sensor
+  name: Simple Adjusted Value
+  description: |
+    Creates a sensor which holds the corrected value of a reference entity's state.
+    Offsetting by static value, another entity's state, or both are allowed.
   domain: template
   input:
     reference_entity:
-      name: Source Sensor
-      description: The sensor which needs to have its value adjusted
+      name: Source Entity
+      description: The entity that needs to have its value adjusted
       selector:
           entity:
             multiple: false
             filter:
-              - domain: sensor
-    offset:
-      name: Offset
-      description: Numerical offset added to the sensors value (use negative values to subtract)
-      default: -1.0
+              - domain:
+                  - sensor
+                  - number
+                  - input_number
+                  - counter
+    static_offset:
+      name: Fixed Offset Value
+      description: |
+        Numeric offset added to the sensors value.
+        Please use negative values to subtract.
+      default: 0
+      selector:
+        number:
+          mode: box
+          min: -5000
+          max: 5000
+    my_section:
+      name: Entity-based Offset
+      icon: mdi:cog
+      description: "These options allow you to use an entity's state as your offset"
+      input:
+        offset_entity:
+          name: Offset Entity
+          description: |
+            The entity whose state value should be used as an offset. 
+            By default this value will be **added** to the source
+            Please check the box below if this value should be subtracted.
+          default: "sensor.example_offset"
+          selector:
+              entity:
+                multiple: false
+                filter:
+                  - domain: 
+                      - sensor
+                      - number
+                      - input_number
+                      - counter
+        subtract:
+          name: Subtract offset entity value
+          default: false
+          selector:
+            constant:
+              value: true
+              label: Offset Entity Value will be subtracted.
 variables:
   reference_entity: !input reference_entity
-  offset: !input offset
+  static_offset: !input offset
+  offset_entity: !input offset_entity
+  subtract: !input subtract
+  o_e: |
+    {% set init = 0 if offset_entity is undefined or offset_entity in [none, "None", "sensor.example_offset"] else states(offset_entity) | float(0) %}
+    {% set invert = -1 if subtract else 1 %}
+    {{ invert * init }}
 sensor:
-  name: "Adjusted {{ state_attr(reference_entity, 'friendly_name')|default(reference_entity|slugify, 1) }}"
+  name: "Adjusted {{ state_attr(reference_entity, 'friendly_name') | default(reference_entity | slugify, 1) }}"
   unit_of_measurement: |
     {{ state_attr(reference_entity, 'unit_of_measurement') | default('', 1) }}
   icon: |
-    {{ state_attr(reference_entity, 'icon') | default('mdi:script-outline', 1) }}
-  state: >
+    {{ state_attr(reference_entity, 'icon') | default('mdi:plus-minus-variant', 1) }}
+  state: |
     {% set h = states(reference_entity) | float(0) %}
-    {% set o = offset | float(0) %}
-    {{ h + o }}
+    {% set s_o = static_offset | float(0) %}
+    {{ h + s_o + o_e }}
   availability: "{{ has_value(reference_entity) }}"
