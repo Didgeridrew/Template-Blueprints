@@ -1,0 +1,28 @@
+blueprint:
+  author: Didgeridrew
+  homeassistant:
+    min_version: 2025.5.0
+  name: Month Name Sensor
+  description: Creates a sensor which holds a value related to the current month.
+  domain: template
+  input:
+    month_names:
+      name: Month Names
+      description: |
+        If you want the month names in a language other than English, or you want to use abbreviations,
+        list them from January to December.
+      selector:
+        text:
+          multiple: true
+      default: |
+        {{['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']}}
+variables:
+  month_names: !input month_names
+trigger: 
+  - trigger: homeassistant
+    event: start
+  - trigger: time_pattern
+    hours: /12
+sensor:
+  state: "{{ month_names[now().month -1] }}"
+  availability: "{{true}}"
