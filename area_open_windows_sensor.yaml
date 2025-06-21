@@ -1,0 +1,73 @@
+blueprint:
+  name: Open Doors or Windows
+  description: |
+    The sensor's state returns a count of the number of open Doors and/or Windows. 
+    Lists of their Entity ID's and the Areas with open windows are provided as attributes.
+  domain: template
+  author: Didgeridrew
+  homeassistant:
+    min_version: 2025.6.0
+  input:
+    door:
+      name: Track Doors
+      description: Select whether doors should be included in this sensor. 
+      default: false
+      selector:
+        boolean:
+    window:
+      name: Track Windows
+      description: Select whether windows should be included in this sensor. 
+      default: true
+      selector:
+        boolean:
+    excluded_doors:
+      name: Excluded Doors
+      description: Any door entities selected will be excluded from the sensor's calculations.
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - device_class: door
+    excluded_windows:
+      name: Excluded Windows
+      description: Any window entities selected will be excluded from the sensor's calculations.
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - device_class: window
+    inc_areas:
+      name: Included Areas
+      description: If used, only windows or doors in the selected Areas will be included.
+      default: []
+      selector:
+        area:
+          multiple: true
+variables:
+  door: !input door
+  ex_doors: !input excluded_doors
+  window: !input window
+  ex_windows: !input excluded_windows
+  in_areas: !input inc_areas
+  area_ents: |
+    {% set in_areas = areas() if in_areas == [] else in_areas %}
+    {{in_areas|map('area_entities')|flatten|select('match', 'binary_sensor.')|list}}
+  ex_d: "{{[ex_doors] if ex_doors is string else ex_doors|default([],1)}}"
+  ex_w: "{{[ex_windows] if ex_windows is string else ex_windows|default([],1)}}"
+  area_doors: |
+    {{[] if not door else area_ents|select('is_state_attr','device_class', 'door')|list}}
+  area_windows: |
+    {{[] if not window else area_ents|select('is_state_attr','device_class', 'window')|list}}
+sensor:
+  state: "{{ this.attributes.open|count|default(0,1) }}"
+  attributes:
+    open: |
+      {% set exclusions = union(ex_w,ex_d) %}
+      {{ expand(union(area_windows, area_doors)|reject('in', exclusions))
+      |rejectattr('attributes.entity_id', 'defined')
+      |map(attribute='entity_id')|select('is_state','on')
+      |list }}  
+    open_areas: "{{ this.attributes.open | map('area_name')|reject('eq', none) | unique | list }}"
+  availability: "{{ true }}"
